@@ -1,12 +1,10 @@
 const outputWindow=document.getElementById("output")
 const buttons=document.getElementsByClassName("bt")
 const operators=['+','-','x','/']
-let output=""
-let toSlice=""
-let result=0
-let data=[]
-let lastcut=0
+const notAllowed=['+','x','/',')','%','^','!']
 let divide='<i class="fa-solid fa-divide"></i>'
+let toSlice=""
+let end=false
 
 for(let i=0;i<buttons.length;i++){
     buttons[i].addEventListener("click", ()=>{
@@ -15,95 +13,195 @@ for(let i=0;i<buttons.length;i++){
 }
 
 const add=(input)=>{
-    console.log(input);
-    if(input=='/'){
-        output+=" "
-        output+=divide
-        toSlice+="/"
+    if(end==true && (notAllowed.includes(input)==false && input!="(" && input!=".")){
+        toSlice=input
+        end=false
     }
     else{
-        output+=input
-        toSlice+=input
+        if(end){
+            end=false
+        }
+        if((notAllowed.includes(input)==false && toSlice.length==0) || toSlice.length>0){
+            console.log(toSlice[toSlice.length-1]);
+            if(operators.includes(toSlice[toSlice.length-1]) && operators.includes(input)){
+                toSlice.slice(0,-1)
+                toSlice+=input
+            }
+            else{
+                toSlice+=input
+            }
+        }
     }
-    outputWindow.innerHTML=output
+    outputWindow.innerHTML=createStr()
 }
+const findBracket=(string)=>{
+    let newString=toSlice.slice(0,toSlice.indexOf(")"))
+    let bracket=newString.slice(newString.lastIndexOf("(")+1,newString.length)
+    return {
+        start:newString.lastIndexOf("(")+1, 
+        end:toSlice.indexOf(")"), 
+        str:bracket
+        }
+}
+
 const execute=()=>{
-    let wynik
-    console.log(output);
-    // console.log(typeof(output));
-    // console.log(toSlice);
-    //pętla "tnie stringa i wstawia elementy do tablicy"
-    for(let i=0;i<toSlice.length;i++){
-        if(operators.includes(toSlice[i])){
-            data.push(parseFloat(toSlice.slice(lastcut,i)))
-            data.push(toSlice[i])
-            lastcut=i+1
+    if(toSlice.includes("(")){
+        let obj=findBracket(toSlice)
+        let calculatedBracket=calculate(obj.str)
+        let part1=toSlice.slice(0,obj.start-1)
+        let part2=toSlice.slice(obj.end+1,toSlice.length)
+        if(operators.includes(toSlice[obj.start-2])){
+            toSlice=part1+calculatedBracket
+            if(operators.includes(part1[part1.length-1])){
+                toSlice+=part2
+            }
+            else if(obj.end==toSlice.length-1){
+                toSlice+="x"
+                toSlice+=part2
+            }
         }
-        else if(i==toSlice.length-1){
-            data.push(parseFloat(toSlice.slice(lastcut,i+1)))
-            lastcut=i+1
+        else{
+            toSlice=part1+"x"+calculatedBracket
+            if(operators.includes(part1[part1.length-1])){
+                toSlice+=part2
+            }
+            else if(obj.end==toSlice.length-1){
+                toSlice+="x"
+                toSlice+=part2
+            }
         }
-        console.log(data);
+        execute()
     }
-    calculate()
-    //outputWindow.innerText=wynik
+    else{
+        let result=calculate(toSlice)
+        outputWindow.innerHTML=result
+        toSlice=result[0]
+        toSlice=String(toSlice)
+        end=true
+    }
+}
+const calculate=(bracket)=>{
+    let lastcut=0
+    let tab=[]
+    let firstNegative=false
+    //cięcie stringa i utworzenie tablicy
+    for(let i=0;i<bracket.length;i++){
+        if(i==0 && bracket[i]=='-'){
+            tab.push(bracket.slice(0,2))
+            i++
+            lastcut+2
+            firstNegative=true
+        }
+        else if(operators.includes(bracket[i])){
+            if(firstNegative){
+                tab.push(bracket[i])
+                lastcut=i+1
+            }
+            else{
+                tab.push(bracket.slice(lastcut,i))
+                tab.push(bracket[i])
+                lastcut=i+1
+            }
+        }
+        else if(i==bracket.length-1){
+            tab.push(bracket.slice(lastcut,i+1))
+            lastcut=i+1
+        }
+    }
+    for(let x=0;x<tab.length;x+=2){
+        //silnia
+        if(tab[x].includes("!")){
+            tab[x]=strong(parseInt(tab[x]))
+        }
+        //potegowanie
+        else if(tab[x].includes("^")){
+            let base=parseFloat(tab[x].slice(0,tab[x].indexOf("^")))
+            let exponent=parseFloat(tab[x].slice(tab[x].indexOf("^")+1,tab[x].length))
+            tab[x]=base**exponent
+        }
+        //pierwiastkowanie
+        else if(tab[x].includes("#")){
+            tab[x]=Math.sqrt(parseFloat(tab[x].slice(1,tab[x].length)))
+        }
+        //procenty
+        else if(tab[x].includes("%")){
+            let procent=parseFloat(tab[x].slice(0,tab[x].indexOf("%")))
+            let number=parseFloat(tab[x].slice(tab[x].indexOf("%")+1, tab[x].length))
+            tab[x]=(procent/100)*number
+        }
+        //pętla odpowiedzialna za mnozenie 
+        for(let i=0;i<tab.length;i++){
+            let x
+            if(tab[i]=="x"){
+                x=tab[i-1]*tab[i+1]
+            }
+            else if(tab[i]=="/"){
+                x=tab[i-1]/tab[i+1]
+            }
+            if(x){
+                let first=tab.slice(0,i-1)
+                let second=tab.slice(i+2,tab.length)
+                i=0
+                tab=first
+                tab.push(x)
+                tab=tab.concat(second)
+            }
+        }
+        //pętla odpowiedzialna za dodawanie i odejmowanie
+        for(let i=0;i<tab.length;i++){
+            let x
+            if(tab[i]=="+"){
+                x=parseFloat(tab[i-1])+parseFloat(tab[i+1])
+            }
+            else if(tab[i]=="-"){
+                x=parseFloat(tab[i-1])-parseFloat(tab[i+1])
+            }
+            if(x){
+                let first=tab.slice(0,i-1)
+                let second=tab.slice(i+2,tab.length)
+                i=0
+                tab=first
+                tab.push(x)
+                tab=tab.concat(second)
+            }
+        }   
+    }
+    return tab
+}
+const strong=(int)=>{
+    let result=1
+    if(int==0 || int==1){
+        return result
+    }
+    else{
+        for(let i=1;i<int+1;i++){
+            result=result*i
+        }
+        return result
+    }
 }
 const deleteAll=()=>{
-    output=""
-    result=0
-    data=[]
     toSlice=""
-    lastcut=0
-    outputWindow.innerHTML=output
+    outputWindow.innerHTML=""
 }
 const del=()=>{
-    output=output.slice(0,-1)
-    toSlice=toSlice.slice(0,-1)
-    outputWindow.innerHTML=output
+    if(toSlice.length>0){
+        toSlice=toSlice.slice(0,-1)
+        outputWindow.innerHTML=createStr()
+    }
 }
-const calculate=()=>{
-    console.log(data);
-    //pętla odpowiedzialna za mnożenie i dzielenie
-    for(let i=0;i<data.length;i++){
-        console.log("i równe", i);
-        console.log(data.length);
-        let x
-        if(data[i]=="x"){
-            x=data[i-1]*data[i+1]
+const createStr=()=>{
+    let output=""
+    for(let i=0;i<toSlice.length;i++){
+        if(toSlice[i]=="/"){
+            output+=divide
         }
-        else if(data[i]=="/"){
-            x=data[i-1]/data[i+1]
+        else if(toSlice[i]=="#"){
+            output+="&radic;"
         }
-        if(x){
-            changeArray(x,i)
+        else{
+            output+=toSlice[i]
         }
     }
-    //pętla odpowiedzialna za dodawanie i odejmowanie
-    for(let i=0;i<data.length;i++){
-        let x
-        if(data[i]=="+"){
-            x=data[i-1]+data[i+1]
-        }
-        else if(data[i]=="-"){
-            x=data[i-1]-data[i+1]
-        }
-        if(x){
-           changeArray(x,i)
-        }
-    }
-    //console.log(newArr);
-}
-const changeArray=(x,i)=>{
-    console.log("x",x);
-    let first=data.slice(0,i-1)
-    console.log("first",first);
-    let second=data.slice(i+2,data.length)
-    i=0
-    console.log("second", second);
-    data=first
-    console.log(data);
-    data.push(x)
-    console.log(data);
-    data=data.concat(second)
-    console.log(data);
+    return output
 }

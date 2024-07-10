@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl-PL">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +7,9 @@
     <link rel="stylesheet" href="/calculator/css/main.css">
     <script src="https://kit.fontawesome.com/e764ae796e.js" crossorigin="anonymous"></script>
 </head>
-<body class="flex justify-center items-center ">
-    <div>
-        <div id="output" class="h-8 text-right">
+<body class="flex justify-center items-center bg-neutral-300">
+    <div class="bg-violet-400 h-60 w-44 flex flex-col items-center">
+        <div id="output" class="h-8 w-36 text-right bg-violet-50">
         </div>
         <div id="buttons" class="w-36 grid grid-cols-4 gap-2">
             <button class="bt">!</button>
@@ -17,7 +17,7 @@
             <button class="bt">)</button>
             <button onclick="deleteAll()">AC</button>
             <button class="bt">^</button>
-            <button>
+            <button onclick="add('#')">
                 <i class="fa-solid fa-square-root-variable"></i>
             </button>
             <button class="bt">%</button>
